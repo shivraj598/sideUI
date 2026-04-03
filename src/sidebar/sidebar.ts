@@ -4,19 +4,16 @@ import { MessageTypes, Favorite } from '../types';
    DOM ELEMENTS
    ============================================ */
 
+// Header elements
+const menuBtn = document.getElementById('menuBtn') as HTMLButtonElement;
+const pinBtn = document.getElementById('pinBtn') as HTMLButtonElement;
+const closeBtn = document.getElementById('closeBtn') as HTMLButtonElement;
+
 // Navigation elements
 const homeBtn = document.getElementById('homeBtn') as HTMLButtonElement;
-const backBtn = document.getElementById('backBtn') as HTMLButtonElement;
-const forwardBtn = document.getElementById('forwardBtn') as HTMLButtonElement;
-const navSearchInput = document.getElementById(
-  'navSearchInput'
-) as HTMLInputElement;
+const navSearchInput = document.getElementById('navSearchInput') as HTMLInputElement;
+const goBtn = document.getElementById('goBtn') as HTMLButtonElement;
 const themeToggle = document.getElementById('themeToggle') as HTMLButtonElement;
-const settingsBtn = document.getElementById('settingsBtn') as HTMLButtonElement;
-
-// Tabs elements
-const tabsList = document.getElementById('tabsList') as HTMLDivElement;
-const addTabBtn = document.getElementById('addTabBtn') as HTMLButtonElement;
 
 // Favorites sidebar
 const quickUrlInput = document.getElementById('quickUrlInput') as HTMLInputElement;
@@ -27,26 +24,16 @@ const countDisplay = document.getElementById('countDisplay') as HTMLSpanElement;
 
 // Viewer area
 const contentFrame = document.getElementById('contentFrame') as HTMLIFrameElement;
-const viewerTitle = document.getElementById('viewerTitle') as HTMLDivElement;
-const closeTabBtn = document.getElementById('closeTabBtn') as HTMLButtonElement;
 const viewerPlaceholder = document.getElementById(
   'viewerPlaceholder'
 ) as HTMLDivElement;
 
 /* ============================================
-   STATE MANAGEMENT
+   STATE
    ============================================ */
-
-interface Tab {
-  id: string;
-  title: string;
-  url: string;
-}
 
 let allFavorites: Favorite[] = [];
 let isDarkMode = localStorage.getItem('sideui-dark-mode') === 'true';
-let tabs: Tab[] = [];
-let activeTabId: string | null = null;
 
 // Generate unique ID
 function generateId(): string {
@@ -82,89 +69,20 @@ function toggleTheme() {
 }
 
 /* ============================================
-   TAB MANAGEMENT
+   CONTENT VIEWER
    ============================================ */
 
-function createNewTab(url?: string, title?: string): string {
-  const id = generateId();
-  const newTab: Tab = {
-    id,
-    url: url || 'about:blank',
-    title: title || 'New Tab',
-  };
-  tabs.push(newTab);
-  activeTabId = id;
-  renderTabs();
-  loadTab(id);
-  return id;
-}
-
-function loadTab(id: string) {
-  const tab = tabs.find((t) => t.id === id);
-  if (!tab) return;
-
-  activeTabId = id;
-  contentFrame.src = tab.url;
-  viewerTitle.textContent = tab.title;
-  renderTabs();
-
+function openInViewer(url: string, title: string) {
+  contentFrame.src = url;
   // Show iframe, hide placeholder
   viewerPlaceholder.classList.add('hidden');
   contentFrame.classList.remove('hidden');
 }
 
-function closeTab(id: string) {
-  tabs = tabs.filter((t) => t.id !== id);
-
-  if (activeTabId === id) {
-    if (tabs.length > 0) {
-      activeTabId = tabs[0].id;
-      loadTab(activeTabId);
-    } else {
-      activeTabId = null;
-      viewerTitle.textContent = 'Welcome to SideUI';
-      viewerPlaceholder.classList.remove('hidden');
-      contentFrame.classList.add('hidden');
-      contentFrame.src = 'about:blank';
-    }
-  }
-
-  renderTabs();
-}
-
-function renderTabs() {
-  tabsList.innerHTML = '';
-
-  tabs.forEach((tab) => {
-    const tabEl = document.createElement('button');
-    tabEl.className = 'tab';
-    if (tab.id === activeTabId) {
-      tabEl.classList.add('active');
-    }
-
-    // Tab title
-    const titleSpan = document.createElement('span');
-    titleSpan.textContent = tab.title;
-    titleSpan.style.flex = '1';
-    tabEl.appendChild(titleSpan);
-
-    // Close button
-    const closeSpan = document.createElement('span');
-    closeSpan.className = 'tab-close';
-    closeSpan.textContent = '✕';
-    closeSpan.addEventListener('click', (e) => {
-      e.stopPropagation();
-      closeTab(tab.id);
-    });
-    tabEl.appendChild(closeSpan);
-
-    // Click to load
-    tabEl.addEventListener('click', () => {
-      loadTab(tab.id);
-    });
-
-    tabsList.appendChild(tabEl);
-  });
+function closeViewer() {
+  contentFrame.src = 'about:blank';
+  viewerPlaceholder.classList.remove('hidden');
+  contentFrame.classList.add('hidden');
 }
 
 /* ============================================
@@ -192,6 +110,7 @@ function renderFavorites(favorites: Favorite[]) {
 
   if (favorites.length === 0) {
     emptyState.classList.remove('hidden');
+    closeViewer();
     return;
   }
 
@@ -255,7 +174,7 @@ function createFavoriteCard(favorite: Favorite): HTMLElement {
   openBtn.textContent = 'Open';
   openBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    openFavoriteInNewTab(favorite);
+    openInViewer(favorite.url, favorite.title);
   });
 
   const removeBtn = document.createElement('button');
@@ -272,22 +191,12 @@ function createFavoriteCard(favorite: Favorite): HTMLElement {
   card.appendChild(header);
   card.appendChild(actions);
 
-  // Click card to open in new tab
+  // Click card to open
   card.addEventListener('click', () => {
-    openFavoriteInNewTab(favorite);
+    openInViewer(favorite.url, favorite.title);
   });
 
   return card;
-}
-
-function openFavoriteInNewTab(favorite: Favorite) {
-  // Find if already open
-  const existingTab = tabs.find((t) => t.url === favorite.url);
-  if (existingTab) {
-    loadTab(existingTab.id);
-  } else {
-    createNewTab(favorite.url, favorite.title);
-  }
 }
 
 async function removeFavorite(id: string) {
@@ -348,7 +257,7 @@ function updateCount() {
    NAVIGATION
    ============================================ */
 
-function handleNavSearch() {
+function handleGoSearch() {
   const query = navSearchInput.value.trim();
   if (!query) return;
 
@@ -361,40 +270,24 @@ function handleNavSearch() {
     url = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
   }
 
-  // Try to add to existing tab or create new
-  const existingTab = tabs.find((t) => t.url === url);
-  if (existingTab) {
-    loadTab(existingTab.id);
-  } else {
-    createNewTab(url, query.length > 20 ? query.substring(0, 20) + '...' : query);
-  }
-
+  openInViewer(url, query);
   navSearchInput.value = '';
 }
 
 function setupEventListeners() {
+  // Header
+  closeBtn.addEventListener('click', () => {
+    // Close the sidebar (extension-level control)
+    chrome.runtime.sendMessage({ type: 'CLOSE_SIDEBAR' }).catch(() => {});
+  });
+
   // Navigation
-  homeBtn.addEventListener('click', () => {
-    viewerTitle.textContent = 'Welcome to SideUI';
-    viewerPlaceholder.classList.remove('hidden');
-    contentFrame.classList.add('hidden');
-    contentFrame.src = 'about:blank';
-    activeTabId = null;
-  });
-
+  homeBtn.addEventListener('click', closeViewer);
+  goBtn.addEventListener('click', handleGoSearch);
   navSearchInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') handleNavSearch();
+    if (e.key === 'Enter') handleGoSearch();
   });
-
   themeToggle.addEventListener('click', toggleTheme);
-
-  // Tabs
-  addTabBtn.addEventListener('click', () => createNewTab());
-  closeTabBtn.addEventListener('click', () => {
-    if (activeTabId) {
-      closeTab(activeTabId);
-    }
-  });
 
   // Favorites
   quickAddBtn.addEventListener('click', handleQuickAdd);
@@ -418,9 +311,6 @@ async function init() {
   initTheme();
   setupEventListeners();
   loadFavorites();
-
-  // Create first tab
-  createNewTab('about:blank', 'Welcome to SideUI');
 }
 
 // Start

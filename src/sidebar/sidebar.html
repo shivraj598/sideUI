@@ -8,46 +8,39 @@
 </head>
 <body>
   <div class="sidebar-app">
+    <!-- Header Bar -->
+    <header class="header-bar">
+      <div class="header-left">
+        <button id="menuBtn" class="header-btn menu-btn" title="Menu">☰</button>
+        <h1 class="header-title">SideUI</h1>
+      </div>
+      <div class="header-right">
+        <button id="pinBtn" class="header-btn" title="Pin">📌</button>
+        <button id="closeBtn" class="header-btn" title="Close">✕</button>
+      </div>
+    </header>
+
     <!-- Navigation Bar -->
-    <nav class="navbar">
-      <div class="navbar-left">
-        <button id="homeBtn" class="nav-btn" title="Home">🏠</button>
-        <button id="backBtn" class="nav-btn" title="Back" disabled>←</button>
-        <button id="forwardBtn" class="nav-btn" title="Forward" disabled>→</button>
-      </div>
-      
-      <div class="navbar-center">
-        <input
-          type="text"
-          id="navSearchInput"
-          placeholder="Search or paste URL..."
-          class="nav-search"
-        />
-      </div>
-
-      <div class="navbar-right">
-        <button id="settingsBtn" class="nav-btn" title="Settings">⚙️</button>
-        <button id="themeToggle" class="nav-btn" title="Toggle theme">🌙</button>
-      </div>
-    </nav>
-
-    <!-- Tabs Panel -->
-    <div class="tabs-panel">
-      <div id="tabsList" class="tabs-container"></div>
-      <button id="addTabBtn" class="add-tab-btn" title="Add new tab">+</button>
+    <div class="navbar">
+      <button id="homeBtn" class="nav-home-btn" title="Home">🏠</button>
+      <input
+        type="text"
+        id="navSearchInput"
+        placeholder="Search"
+        class="nav-search"
+      />
+      <button id="goBtn" class="nav-go-btn">Go</button>
+      <button id="themeToggle" class="nav-theme-btn" title="Theme">🌙</button>
     </div>
 
-    <!-- Content Area -->
-    <div class="content-area">
-      <!-- Favorites Sidebar (Left) -->
+    <!-- Main Content Area -->
+    <div class="main-content">
+      <!-- Left Sidebar (Favorites) -->
       <aside class="favorites-sidebar">
-        <div class="sidebar-title">Favorites</div>
-        <div class="sidebar-stats">
-          <span id="countDisplay">No favorites</span>
-        </div>
+        <div class="sidebar-header">Favorites</div>
 
         <!-- Quick Add -->
-        <div class="quick-add-section">
+        <div class="quick-add-box">
           <input
             type="url"
             id="quickUrlInput"
@@ -57,26 +50,30 @@
           <button id="quickAddBtn" class="quick-btn">Add</button>
         </div>
 
+        <!-- Stats -->
+        <div class="sidebar-stats">
+          <span id="countDisplay">No favorites</span>
+        </div>
+
         <!-- Favorites List -->
         <div id="favoritesList" class="favorites-list"></div>
+
+        <!-- Empty State -->
         <div id="emptyState" class="empty-state">
           <div class="empty-icon">⭐</div>
           <div class="empty-text">No favorites yet</div>
         </div>
       </aside>
 
-      <!-- Main Viewer Area (Right) -->
-      <main class="viewer-area">
-        <div class="viewer-header">
-          <h2 id="viewerTitle" class="viewer-title">Welcome to SideUI</h2>
-          <button id="closeTabBtn" class="close-btn" title="Close tab">✕</button>
-        </div>
-        <div class="viewer-content">
+      <!-- Main Viewer (Center) -->
+      <main class="viewer-main">
+        <div class="viewer-wrapper">
           <iframe id="contentFrame" class="content-iframe"></iframe>
-          <div id="viewerPlaceholder" class="viewer-placeholder">
-            <div class="welcome-icon">🌐</div>
-            <h1>Welcome to SideUI</h1>
-            <p>Open a favorite or search to get started</p>
+          <div id="viewerPlaceholder" class="placeholder-box">
+            <div class="placeholder-content">
+              <div class="placeholder-icon">🔗</div>
+              <div class="placeholder-text">Drag and drop your link or text here</div>
+            </div>
           </div>
         </div>
       </main>
