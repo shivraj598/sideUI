@@ -1,32 +1,51 @@
 import { MessageTypes, Favorite } from '../types';
 
-const searchInput = document.getElementById('searchInput') as HTMLInputElement;
+const googleSearch = document.getElementById('googleSearch') as HTMLInputElement;
+const searchBtn = document.getElementById('searchBtn') as HTMLButtonElement;
+const themeToggle = document.getElementById('themeToggle') as HTMLButtonElement;
 const quickUrlInput = document.getElementById(
   'quickUrlInput'
 ) as HTMLInputElement;
 const quickAddBtn = document.getElementById('quickAddBtn') as HTMLButtonElement;
-const clearBtn = document.getElementById('clearBtn') as HTMLButtonElement;
 const favoritesList = document.getElementById('favoritesList') as HTMLDivElement;
 const emptyState = document.getElementById('emptyState') as HTMLDivElement;
 const countDisplay = document.getElementById('countDisplay') as HTMLSpanElement;
 
 let allFavorites: Favorite[] = [];
+let isDarkMode = localStorage.getItem('sideui-dark-mode') === 'true';
 
 async function init() {
+  initTheme();
   loadFavorites();
   setupEventListeners();
   setupMessageListener();
 }
 
+function initTheme() {
+  if (isDarkMode) {
+    document.body.classList.add('dark-mode');
+    themeToggle.textContent = '☀️';
+  } else {
+    document.body.classList.remove('dark-mode');
+    themeToggle.textContent = '🌙';
+  }
+}
+
 function setupEventListeners() {
+  // Search Google
+  searchBtn.addEventListener('click', handleGoogleSearch);
+  googleSearch.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') handleGoogleSearch();
+  });
+
+  // Quick add URL
   quickAddBtn.addEventListener('click', handleQuickAdd);
   quickUrlInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') handleQuickAdd();
   });
 
-  searchInput.addEventListener('input', filterFavorites);
-
-  clearBtn.addEventListener('click', handleClearAll);
+  // Theme toggle
+  themeToggle.addEventListener('click', toggleTheme);
 }
 
 function setupMessageListener() {
@@ -35,6 +54,30 @@ function setupMessageListener() {
       loadFavorites();
     }
   });
+}
+
+function toggleTheme() {
+  isDarkMode = !isDarkMode;
+  localStorage.setItem('sideui-dark-mode', isDarkMode ? 'true' : 'false');
+  initTheme();
+}
+
+async function handleGoogleSearch() {
+  const query = googleSearch.value.trim();
+
+  if (!query) return;
+
+  const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+
+  try {
+    await chrome.runtime.sendMessage({
+      type: MessageTypes.OPEN_URL,
+      payload: { url: searchUrl, newTab: true },
+    });
+    googleSearch.value = '';
+  } catch (error) {
+    console.error('Error performing search:', error);
+  }
 }
 
 async function loadFavorites() {
@@ -204,46 +247,6 @@ async function handleQuickAdd() {
   } catch (error) {
     console.error('Error adding favorite:', error);
   }
-}
-
-async function handleClearAll() {
-  if (allFavorites.length === 0) return;
-
-  const confirmed = confirm(
-    `Clear all ${allFavorites.length} favorites? This cannot be undone.`
-  );
-
-  if (!confirmed) return;
-
-  try {
-    // Remove all favorites one by one (or you could add a clear all endpoint)
-    for (const favorite of allFavorites) {
-      await chrome.runtime.sendMessage({
-        type: MessageTypes.REMOVE_FAVORITE,
-        payload: { id: favorite.id },
-      });
-    }
-    loadFavorites();
-  } catch (error) {
-    console.error('Error clearing favorites:', error);
-  }
-}
-
-function filterFavorites() {
-  const query = searchInput.value.toLowerCase().trim();
-
-  if (!query) {
-    renderFavorites(allFavorites);
-    return;
-  }
-
-  const filtered = allFavorites.filter(
-    (fav) =>
-      fav.title.toLowerCase().includes(query) ||
-      fav.url.toLowerCase().includes(query)
-  );
-
-  renderFavorites(filtered);
 }
 
 function updateCount() {

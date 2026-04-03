@@ -2,7 +2,7 @@ import { MessageTypes } from '../types';
 import { StorageManager } from '../utils/storage';
 import { SidePanelUtil } from '../utils/sidePanel';
 
-// Handle extension icon click - toggle sidebar
+// Handle extension icon click - open sidebar
 chrome.action.onClicked.addListener(async (tab) => {
   if (tab.id) {
     await SidePanelUtil.open(tab.id);

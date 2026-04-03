@@ -14,8 +14,7 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "Open SideUI",
-    "default_popup": "popup.html"
+    "default_title": "Open SideUI"
   },
   "side_panel": {
     "default_path": "sidebar.html"
