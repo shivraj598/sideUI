@@ -1,18 +1,34 @@
 import { MessageTypes, Favorite } from '../types';
 
+// Left panel elements
 const googleSearch = document.getElementById('googleSearch') as HTMLInputElement;
 const searchBtn = document.getElementById('searchBtn') as HTMLButtonElement;
 const themeToggle = document.getElementById('themeToggle') as HTMLButtonElement;
-const quickUrlInput = document.getElementById(
-  'quickUrlInput'
-) as HTMLInputElement;
+const quickUrlInput = document.getElementById('quickUrlInput') as HTMLInputElement;
 const quickAddBtn = document.getElementById('quickAddBtn') as HTMLButtonElement;
 const favoritesList = document.getElementById('favoritesList') as HTMLDivElement;
 const emptyState = document.getElementById('emptyState') as HTMLDivElement;
 const countDisplay = document.getElementById('countDisplay') as HTMLSpanElement;
 
+// Right panel (iframe viewer) elements
+const contentFrame = document.getElementById('contentFrame') as HTMLIFrameElement;
+const viewerTitle = document.getElementById('viewerTitle') as HTMLDivElement;
+const closeViewerBtn = document.getElementById('closeViewerBtn') as HTMLButtonElement;
+const viewerPlaceholder = document.getElementById('viewerPlaceholder') as HTMLDivElement;
+
 let allFavorites: Favorite[] = [];
 let isDarkMode = localStorage.getItem('sideui-dark-mode') === 'true';
+let currentViewingId: string | null = null;
+
+// Extract favicon URL using Google's favicon service
+function extractFaviconUrl(urlString: string): string {
+  try {
+    const url = new URL(urlString);
+    return `https://www.google.com/s2/favicons?sz=64&domain=${url.hostname}`;
+  } catch {
+    return '';
+  }
+}
 
 async function init() {
   initTheme();
@@ -46,6 +62,9 @@ function setupEventListeners() {
 
   // Theme toggle
   themeToggle.addEventListener('click', toggleTheme);
+
+  // Close viewer button
+  closeViewerBtn.addEventListener('click', closeViewer);
 }
 
 function setupMessageListener() {
@@ -62,22 +81,45 @@ function toggleTheme() {
   initTheme();
 }
 
+function openInViewer(url: string, title: string, favoriteId?: string) {
+  currentViewingId = favoriteId || null;
+  contentFrame.src = url;
+  viewerTitle.textContent = title;
+  viewerPlaceholder.classList.add('hidden');
+  contentFrame.classList.remove('hidden');
+  
+  // Update active state on favorite cards
+  document.querySelectorAll('.favorite-card').forEach((card) => {
+    card.classList.remove('active');
+  });
+  if (favoriteId) {
+    const activeCard = document.querySelector(
+      `[data-favorite-id="${favoriteId}"]`
+    );
+    if (activeCard) {
+      activeCard.classList.add('active');
+    }
+  }
+}
+
+function closeViewer() {
+  currentViewingId = null;
+  contentFrame.src = 'about:blank';
+  viewerPlaceholder.classList.remove('hidden');
+  contentFrame.classList.add('hidden');
+  document.querySelectorAll('.favorite-card').forEach((card) => {
+    card.classList.remove('active');
+  });
+}
+
 async function handleGoogleSearch() {
   const query = googleSearch.value.trim();
 
   if (!query) return;
 
   const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
-
-  try {
-    await chrome.runtime.sendMessage({
-      type: MessageTypes.OPEN_URL,
-      payload: { url: searchUrl, newTab: true },
-    });
-    googleSearch.value = '';
-  } catch (error) {
-    console.error('Error performing search:', error);
-  }
+  openInViewer(searchUrl, `Search: ${query}`);
+  googleSearch.value = '';
 }
 
 async function loadFavorites() {
@@ -101,6 +143,7 @@ function renderFavorites(favorites: Favorite[]) {
 
   if (favorites.length === 0) {
     emptyState.classList.remove('hidden');
+    closeViewer();
     return;
   }
 
@@ -118,6 +161,11 @@ function renderFavorites(favorites: Favorite[]) {
 function createFavoriteCard(favorite: Favorite): HTMLElement {
   const card = document.createElement('div');
   card.className = 'favorite-card';
+  card.setAttribute('data-favorite-id', favorite.id);
+
+  if (currentViewingId === favorite.id) {
+    card.classList.add('active');
+  }
 
   const header = document.createElement('div');
   header.className = 'favorite-header';
@@ -162,15 +210,7 @@ function createFavoriteCard(favorite: Favorite): HTMLElement {
   openBtn.textContent = '↗️ Open';
   openBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    openUrl(favorite.url, false);
-  });
-
-  const openNewBtn = document.createElement('button');
-  openNewBtn.className = 'favorite-action-btn';
-  openNewBtn.textContent = '🔗 New Tab';
-  openNewBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    openUrl(favorite.url, true);
+    openInViewer(favorite.url, favorite.title, favorite.id);
   });
 
   const removeBtn = document.createElement('button');
@@ -182,29 +222,17 @@ function createFavoriteCard(favorite: Favorite): HTMLElement {
   });
 
   actions.appendChild(openBtn);
-  actions.appendChild(openNewBtn);
   actions.appendChild(removeBtn);
 
   card.appendChild(header);
   card.appendChild(actions);
 
-  // Click anywhere on card to open
+  // Click card to open in viewer
   card.addEventListener('click', () => {
-    openUrl(favorite.url, false);
+    openInViewer(favorite.url, favorite.title, favorite.id);
   });
 
   return card;
-}
-
-async function openUrl(url: string, newTab: boolean) {
-  try {
-    await chrome.runtime.sendMessage({
-      type: MessageTypes.OPEN_URL,
-      payload: { url, newTab },
-    });
-  } catch (error) {
-    console.error('Error opening URL:', error);
-  }
 }
 
 async function removeFavorite(id: string) {
@@ -215,6 +243,10 @@ async function removeFavorite(id: string) {
     });
 
     if (response.success) {
+      // If we're viewing the deleted favorite, close the viewer
+      if (currentViewingId === id) {
+        closeViewer();
+      }
       loadFavorites();
     }
   } catch (error) {
@@ -235,9 +267,12 @@ async function handleQuickAdd() {
   }
 
   try {
+    // Extract favicon before sending
+    const favicon = extractFaviconUrl(url);
+    
     const response = await chrome.runtime.sendMessage({
       type: MessageTypes.ADD_FAVORITE,
-      payload: { url },
+      payload: { url, favicon },
     });
 
     if (response.success) {

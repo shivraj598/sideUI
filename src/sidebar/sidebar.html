@@ -8,6 +8,7 @@
 </head>
 <body>
   <div class="sidebar-container">
+    <!-- Header -->
     <div class="sidebar-header">
       <h1>SideUI</h1>
       <button id="themeToggle" class="btn-icon theme-btn" title="Toggle dark mode">
@@ -15,6 +16,7 @@
       </button>
     </div>
 
+    <!-- Search Google -->
     <div class="search-bar">
       <input
         type="text"
@@ -25,6 +27,7 @@
       <button id="searchBtn" class="btn btn-search">🔍</button>
     </div>
 
+    <!-- Quick Add URL -->
     <div class="quick-add">
       <input
         type="url"
@@ -32,19 +35,40 @@
         placeholder="Paste URL here..."
         class="quick-url-input"
       />
-      <button id="quickAddBtn" class="btn btn-sm">+</button>
+      <button id="quickAddBtn" class="btn btn-sm btn-add">
+        <span class="btn-icon-text">+ Add</span>
+      </button>
     </div>
 
-    <div class="stats">
-      <span id="countDisplay">No favorites yet</span>
-    </div>
+    <!-- Main Content Area -->
+    <div class="main-content">
+      <!-- Favorites List (Left Panel) -->
+      <div class="favorites-panel">
+        <div class="stats">
+          <span id="countDisplay">No favorites yet</span>
+        </div>
+        <div id="favoritesList" class="favorites-list"></div>
+        <div id="emptyState" class="empty-state">
+          <div class="empty-icon">🔖</div>
+          <h2>No Favorites Yet</h2>
+          <p>Add URLs to build your favorite collection</p>
+        </div>
+      </div>
 
-    <div id="favoritesList" class="favorites-list"></div>
-
-    <div id="emptyState" class="empty-state">
-      <div class="empty-icon">🔖</div>
-      <h2>No Favorites Yet</h2>
-      <p>Add URLs to build your favorite collection</p>
+      <!-- Viewer Panel (Right Panel) -->
+      <div class="viewer-panel">
+        <div class="viewer-header">
+          <h3 id="viewerTitle">Browser</h3>
+          <button id="closeViewerBtn" class="btn-icon close-btn" title="Close">✕</button>
+        </div>
+        <div class="viewer-content">
+          <iframe id="contentFrame" class="content-iframe"></iframe>
+          <div id="viewerPlaceholder" class="viewer-placeholder">
+            <div class="placeholder-icon">🌐</div>
+            <p>Click on a favorite to view</p>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
