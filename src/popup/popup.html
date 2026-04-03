@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SideUI - Add Favorite</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="popup-container">
+    <div class="header">
+      <h1>SideUI</h1>
+      <button id="openSidebar" class="btn-icon" title="Open sidebar">
+        ⇦
+      </button>
+    </div>
+
+    <div class="form-group">
+      <label for="urlInput">URL:</label>
+      <input type="url" id="urlInput" placeholder="https://example.com" />
+    </div>
+
+    <div class="form-group">
+      <label for="titleInput">Title (optional):</label>
+      <input type="text" id="titleInput" placeholder="My Website" />
+    </div>
+
+    <button id="addBtn" class="btn btn-primary">Add to Favorites</button>
+
+    <div id="status" class="status"></div>
+
+    <div class="divider"></div>
+
+    <div class="recent-section">
+      <h3>Recent Favorites</h3>
+      <div id="recentList" class="favorite-list"></div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

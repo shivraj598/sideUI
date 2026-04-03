@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SideUI - Favorites</title>
+  <link rel="stylesheet" href="sidebar.css" />
+</head>
+<body>
+  <div class="sidebar-container">
+    <div class="sidebar-header">
+      <h1>SideUI</h1>
+      <div class="header-actions">
+        <input
+          type="text"
+          id="searchInput"
+          placeholder="Search favorites..."
+          class="search-input"
+        />
+        <button id="clearBtn" class="btn-icon" title="Clear all favorites">
+          🗑️
+        </button>
+      </div>
+    </div>
+
+    <div class="quick-add">
+      <input
+        type="url"
+        id="quickUrlInput"
+        placeholder="Paste URL here..."
+        class="quick-url-input"
+      />
+      <button id="quickAddBtn" class="btn btn-sm">+</button>
+    </div>
+
+    <div class="stats">
+      <span id="countDisplay">No favorites yet</span>
+    </div>
+
+    <div id="favoritesList" class="favorites-list"></div>
+
+    <div id="emptyState" class="empty-state">
+      <div class="empty-icon">🔖</div>
+      <h2>No Favorites Yet</h2>
+      <p>Add URLs to build your favorite collection</p>
+    </div>
+  </div>
+
+  <script src="sidebar.js"></script>
+</body>
+</html>

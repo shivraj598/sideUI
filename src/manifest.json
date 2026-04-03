@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "SideUI - URL Favorites Manager",
+  "version": "1.0.0",
+  "description": "Save and manage your favorite URLs in a sidebar without storing search history",
+  "permissions": [
+    "storage",
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Open SideUI",
+    "default_popup": "popup.html"
+  },
+  "side_panel": {
+    "default_path": "sidebar.html"
+  },
+  "commands": {
+    "toggle_sidebar": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+U",
+        "mac": "Command+Shift+U"
+      },
+      "description": "Toggle SideUI sidebar"
+    }
+  }
+}
