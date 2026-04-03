@@ -1,4 +1,5 @@
 import { MessageTypes, Favorite } from '../types';
+import { SidePanelUtil } from '../utils/sidePanel';
 
 const urlInput = document.getElementById('urlInput') as HTMLInputElement;
 const titleInput = document.getElementById('titleInput') as HTMLInputElement;
@@ -168,7 +169,7 @@ addBtn.addEventListener('click', async () => {
 openSidebarBtn.addEventListener('click', async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (tab.id) {
-    await chrome.sidePanel.open({ tabId: tab.id });
+    await SidePanelUtil.open(tab.id);
     window.close();
   }
 });

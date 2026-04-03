@@ -1,19 +1,23 @@
 import { MessageTypes } from '../types';
 import { StorageManager } from '../utils/storage';
+import { SidePanelUtil } from '../utils/sidePanel';
 
 // Handle extension icon click - toggle sidebar
 chrome.action.onClicked.addListener(async (tab) => {
   if (tab.id) {
-    await chrome.sidePanel.open({ tabId: tab.id });
+    await SidePanelUtil.open(tab.id);
   }
 });
 
 // Handle keyboard shortcut for toggling sidebar
 chrome.commands.onCommand.addListener(async (command) => {
   if (command === 'toggle_sidebar') {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
     if (tab.id) {
-      await chrome.sidePanel.toggle({ tabId: tab.id });
+      await SidePanelUtil.toggle(tab.id);
     }
   }
 });
@@ -40,14 +44,17 @@ async function handleMessage(
       case MessageTypes.ADD_FAVORITE: {
         const { url, title, favicon } = message.payload;
         const favorite = await StorageManager.addFavorite(url, title, favicon);
-        
+
         // Broadcast to all tabs
         chrome.tabs.query({}, (tabs) => {
           tabs.forEach((tab) => {
             if (tab.id) {
               chrome.tabs.sendMessage(
                 tab.id,
-                { type: MessageTypes.FAVORITES_UPDATED, payload: { favorites: [favorite] } },
+                {
+                  type: MessageTypes.FAVORITES_UPDATED,
+                  payload: { favorites: [favorite] },
+                },
                 () => chrome.runtime.lastError // Ignore errors if tab can't receive
               );
             }
@@ -61,14 +68,17 @@ async function handleMessage(
       case MessageTypes.REMOVE_FAVORITE: {
         const { id } = message.payload;
         await StorageManager.removeFavorite(id);
-        
+
         // Broadcast to all tabs
         chrome.tabs.query({}, (tabs) => {
           tabs.forEach((tab) => {
             if (tab.id) {
               chrome.tabs.sendMessage(
                 tab.id,
-                { type: MessageTypes.FAVORITES_UPDATED, payload: { removed: id } },
+                {
+                  type: MessageTypes.FAVORITES_UPDATED,
+                  payload: { removed: id },
+                },
                 () => chrome.runtime.lastError
               );
             }
