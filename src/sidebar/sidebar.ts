@@ -1,26 +1,59 @@
 import { MessageTypes, Favorite } from '../types';
 
-// Left panel elements
-const googleSearch = document.getElementById('googleSearch') as HTMLInputElement;
-const searchBtn = document.getElementById('searchBtn') as HTMLButtonElement;
+/* ============================================
+   DOM ELEMENTS
+   ============================================ */
+
+// Navigation elements
+const homeBtn = document.getElementById('homeBtn') as HTMLButtonElement;
+const backBtn = document.getElementById('backBtn') as HTMLButtonElement;
+const forwardBtn = document.getElementById('forwardBtn') as HTMLButtonElement;
+const navSearchInput = document.getElementById(
+  'navSearchInput'
+) as HTMLInputElement;
 const themeToggle = document.getElementById('themeToggle') as HTMLButtonElement;
+const settingsBtn = document.getElementById('settingsBtn') as HTMLButtonElement;
+
+// Tabs elements
+const tabsList = document.getElementById('tabsList') as HTMLDivElement;
+const addTabBtn = document.getElementById('addTabBtn') as HTMLButtonElement;
+
+// Favorites sidebar
 const quickUrlInput = document.getElementById('quickUrlInput') as HTMLInputElement;
 const quickAddBtn = document.getElementById('quickAddBtn') as HTMLButtonElement;
 const favoritesList = document.getElementById('favoritesList') as HTMLDivElement;
 const emptyState = document.getElementById('emptyState') as HTMLDivElement;
 const countDisplay = document.getElementById('countDisplay') as HTMLSpanElement;
 
-// Right panel (iframe viewer) elements
+// Viewer area
 const contentFrame = document.getElementById('contentFrame') as HTMLIFrameElement;
 const viewerTitle = document.getElementById('viewerTitle') as HTMLDivElement;
-const closeViewerBtn = document.getElementById('closeViewerBtn') as HTMLButtonElement;
-const viewerPlaceholder = document.getElementById('viewerPlaceholder') as HTMLDivElement;
+const closeTabBtn = document.getElementById('closeTabBtn') as HTMLButtonElement;
+const viewerPlaceholder = document.getElementById(
+  'viewerPlaceholder'
+) as HTMLDivElement;
+
+/* ============================================
+   STATE MANAGEMENT
+   ============================================ */
+
+interface Tab {
+  id: string;
+  title: string;
+  url: string;
+}
 
 let allFavorites: Favorite[] = [];
 let isDarkMode = localStorage.getItem('sideui-dark-mode') === 'true';
-let currentViewingId: string | null = null;
+let tabs: Tab[] = [];
+let activeTabId: string | null = null;
 
-// Extract favicon URL using Google's favicon service
+// Generate unique ID
+function generateId(): string {
+  return '_' + Math.random().toString(36).substr(2, 9);
+}
+
+// Extract favicon URL
 function extractFaviconUrl(urlString: string): string {
   try {
     const url = new URL(urlString);
@@ -30,13 +63,7 @@ function extractFaviconUrl(urlString: string): string {
   }
 }
 
-async function init() {
-  initTheme();
-  loadFavorites();
-  setupEventListeners();
-  setupMessageListener();
-}
-
+// Initialize theme
 function initTheme() {
   if (isDarkMode) {
     document.body.classList.add('dark-mode');
@@ -47,80 +74,102 @@ function initTheme() {
   }
 }
 
-function setupEventListeners() {
-  // Search Google
-  searchBtn.addEventListener('click', handleGoogleSearch);
-  googleSearch.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') handleGoogleSearch();
-  });
-
-  // Quick add URL
-  quickAddBtn.addEventListener('click', handleQuickAdd);
-  quickUrlInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') handleQuickAdd();
-  });
-
-  // Theme toggle
-  themeToggle.addEventListener('click', toggleTheme);
-
-  // Close viewer button
-  closeViewerBtn.addEventListener('click', closeViewer);
-}
-
-function setupMessageListener() {
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.type === MessageTypes.FAVORITES_UPDATED) {
-      loadFavorites();
-    }
-  });
-}
-
+// Toggle theme
 function toggleTheme() {
   isDarkMode = !isDarkMode;
   localStorage.setItem('sideui-dark-mode', isDarkMode ? 'true' : 'false');
   initTheme();
 }
 
-function openInViewer(url: string, title: string, favoriteId?: string) {
-  currentViewingId = favoriteId || null;
-  contentFrame.src = url;
-  viewerTitle.textContent = title;
+/* ============================================
+   TAB MANAGEMENT
+   ============================================ */
+
+function createNewTab(url?: string, title?: string): string {
+  const id = generateId();
+  const newTab: Tab = {
+    id,
+    url: url || 'about:blank',
+    title: title || 'New Tab',
+  };
+  tabs.push(newTab);
+  activeTabId = id;
+  renderTabs();
+  loadTab(id);
+  return id;
+}
+
+function loadTab(id: string) {
+  const tab = tabs.find((t) => t.id === id);
+  if (!tab) return;
+
+  activeTabId = id;
+  contentFrame.src = tab.url;
+  viewerTitle.textContent = tab.title;
+  renderTabs();
+
+  // Show iframe, hide placeholder
   viewerPlaceholder.classList.add('hidden');
   contentFrame.classList.remove('hidden');
-  
-  // Update active state on favorite cards
-  document.querySelectorAll('.favorite-card').forEach((card) => {
-    card.classList.remove('active');
-  });
-  if (favoriteId) {
-    const activeCard = document.querySelector(
-      `[data-favorite-id="${favoriteId}"]`
-    );
-    if (activeCard) {
-      activeCard.classList.add('active');
+}
+
+function closeTab(id: string) {
+  tabs = tabs.filter((t) => t.id !== id);
+
+  if (activeTabId === id) {
+    if (tabs.length > 0) {
+      activeTabId = tabs[0].id;
+      loadTab(activeTabId);
+    } else {
+      activeTabId = null;
+      viewerTitle.textContent = 'Welcome to SideUI';
+      viewerPlaceholder.classList.remove('hidden');
+      contentFrame.classList.add('hidden');
+      contentFrame.src = 'about:blank';
     }
   }
+
+  renderTabs();
 }
 
-function closeViewer() {
-  currentViewingId = null;
-  contentFrame.src = 'about:blank';
-  viewerPlaceholder.classList.remove('hidden');
-  contentFrame.classList.add('hidden');
-  document.querySelectorAll('.favorite-card').forEach((card) => {
-    card.classList.remove('active');
+function renderTabs() {
+  tabsList.innerHTML = '';
+
+  tabs.forEach((tab) => {
+    const tabEl = document.createElement('button');
+    tabEl.className = 'tab';
+    if (tab.id === activeTabId) {
+      tabEl.classList.add('active');
+    }
+
+    // Tab title
+    const titleSpan = document.createElement('span');
+    titleSpan.textContent = tab.title;
+    titleSpan.style.flex = '1';
+    tabEl.appendChild(titleSpan);
+
+    // Close button
+    const closeSpan = document.createElement('span');
+    closeSpan.className = 'tab-close';
+    closeSpan.textContent = '✕';
+    closeSpan.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeTab(tab.id);
+    });
+    tabEl.appendChild(closeSpan);
+
+    // Click to load
+    tabEl.addEventListener('click', () => {
+      loadTab(tab.id);
+    });
+
+    tabsList.appendChild(tabEl);
   });
 }
 
-async function handleGoogleSearch() {
-  const query = googleSearch.value.trim();
-
-  if (!query) return;
-
-  const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
-  openInViewer(searchUrl, `Search: ${query}`);
-  googleSearch.value = '';
-}
+/* ============================================
+   FAVORITES MANAGEMENT
+   ============================================ */
 
 async function loadFavorites() {
   try {
@@ -143,7 +192,6 @@ function renderFavorites(favorites: Favorite[]) {
 
   if (favorites.length === 0) {
     emptyState.classList.remove('hidden');
-    closeViewer();
     return;
   }
 
@@ -163,10 +211,7 @@ function createFavoriteCard(favorite: Favorite): HTMLElement {
   card.className = 'favorite-card';
   card.setAttribute('data-favorite-id', favorite.id);
 
-  if (currentViewingId === favorite.id) {
-    card.classList.add('active');
-  }
-
+  // Header section
   const header = document.createElement('div');
   header.className = 'favorite-header';
 
@@ -184,7 +229,7 @@ function createFavoriteCard(favorite: Favorite): HTMLElement {
     faviconDiv.textContent = '🔗';
   }
 
-  // Info section
+  // Info
   const info = document.createElement('div');
   info.className = 'favorite-info';
 
@@ -207,15 +252,15 @@ function createFavoriteCard(favorite: Favorite): HTMLElement {
 
   const openBtn = document.createElement('button');
   openBtn.className = 'favorite-action-btn';
-  openBtn.textContent = '↗️ Open';
+  openBtn.textContent = 'Open';
   openBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    openInViewer(favorite.url, favorite.title, favorite.id);
+    openFavoriteInNewTab(favorite);
   });
 
   const removeBtn = document.createElement('button');
   removeBtn.className = 'favorite-action-btn remove';
-  removeBtn.textContent = '✕ Remove';
+  removeBtn.textContent = 'Remove';
   removeBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     removeFavorite(favorite.id);
@@ -227,12 +272,22 @@ function createFavoriteCard(favorite: Favorite): HTMLElement {
   card.appendChild(header);
   card.appendChild(actions);
 
-  // Click card to open in viewer
+  // Click card to open in new tab
   card.addEventListener('click', () => {
-    openInViewer(favorite.url, favorite.title, favorite.id);
+    openFavoriteInNewTab(favorite);
   });
 
   return card;
+}
+
+function openFavoriteInNewTab(favorite: Favorite) {
+  // Find if already open
+  const existingTab = tabs.find((t) => t.url === favorite.url);
+  if (existingTab) {
+    loadTab(existingTab.id);
+  } else {
+    createNewTab(favorite.url, favorite.title);
+  }
 }
 
 async function removeFavorite(id: string) {
@@ -243,10 +298,6 @@ async function removeFavorite(id: string) {
     });
 
     if (response.success) {
-      // If we're viewing the deleted favorite, close the viewer
-      if (currentViewingId === id) {
-        closeViewer();
-      }
       loadFavorites();
     }
   } catch (error) {
@@ -267,9 +318,8 @@ async function handleQuickAdd() {
   }
 
   try {
-    // Extract favicon before sending
     const favicon = extractFaviconUrl(url);
-    
+
     const response = await chrome.runtime.sendMessage({
       type: MessageTypes.ADD_FAVORITE,
       payload: { url, favicon },
@@ -286,7 +336,7 @@ async function handleQuickAdd() {
 
 function updateCount() {
   if (allFavorites.length === 0) {
-    countDisplay.textContent = 'No favorites yet';
+    countDisplay.textContent = 'No favorites';
   } else if (allFavorites.length === 1) {
     countDisplay.textContent = '1 favorite';
   } else {
@@ -294,5 +344,84 @@ function updateCount() {
   }
 }
 
-// Initialize on load
+/* ============================================
+   NAVIGATION
+   ============================================ */
+
+function handleNavSearch() {
+  const query = navSearchInput.value.trim();
+  if (!query) return;
+
+  // Check if it's a URL
+  let url: string;
+  if (query.startsWith('http://') || query.startsWith('https://')) {
+    url = query;
+  } else {
+    // It's a search query
+    url = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+  }
+
+  // Try to add to existing tab or create new
+  const existingTab = tabs.find((t) => t.url === url);
+  if (existingTab) {
+    loadTab(existingTab.id);
+  } else {
+    createNewTab(url, query.length > 20 ? query.substring(0, 20) + '...' : query);
+  }
+
+  navSearchInput.value = '';
+}
+
+function setupEventListeners() {
+  // Navigation
+  homeBtn.addEventListener('click', () => {
+    viewerTitle.textContent = 'Welcome to SideUI';
+    viewerPlaceholder.classList.remove('hidden');
+    contentFrame.classList.add('hidden');
+    contentFrame.src = 'about:blank';
+    activeTabId = null;
+  });
+
+  navSearchInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') handleNavSearch();
+  });
+
+  themeToggle.addEventListener('click', toggleTheme);
+
+  // Tabs
+  addTabBtn.addEventListener('click', () => createNewTab());
+  closeTabBtn.addEventListener('click', () => {
+    if (activeTabId) {
+      closeTab(activeTabId);
+    }
+  });
+
+  // Favorites
+  quickAddBtn.addEventListener('click', handleQuickAdd);
+  quickUrlInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') handleQuickAdd();
+  });
+
+  // Message listener
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === MessageTypes.FAVORITES_UPDATED) {
+      loadFavorites();
+    }
+  });
+}
+
+/* ============================================
+   INITIALIZATION
+   ============================================ */
+
+async function init() {
+  initTheme();
+  setupEventListeners();
+  loadFavorites();
+
+  // Create first tab
+  createNewTab('about:blank', 'Welcome to SideUI');
+}
+
+// Start
 init();
